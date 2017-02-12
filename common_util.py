@@ -333,11 +333,6 @@ class CommonUtil(object):
 
 def main():
     u"""処理呼び出し."""
-    # obj = CommonUtil()
-    # b = CommonUtil()
-    # print obj.extract_strings('AAABBBCCCDDDEEE', 'BBB', 'DDD')
-    # print (obj is b)
-    # print (CommonUtil.extract_strings('AAABBBCCCDDDEEE', 'BBB', 'DDD'))
     pass
 
 
