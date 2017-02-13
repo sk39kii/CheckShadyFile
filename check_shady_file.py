@@ -54,7 +54,8 @@ class CheckShadyFile(object):
         self.binary_simple_check = True
         # スキャン1(文字列の存在有無)の有効/無効
         self.scan1_enable = True
-
+        # スキャン2にAND条件を適用
+        self.scan2_mode_and = False
         # 出力内容(LINE/ALL/FILE/NONE)
         self.output_display = "LINE"
         # 出力結果のファイルパスを相対パスで表示するか否か
@@ -152,6 +153,10 @@ class CheckShadyFile(object):
         word_dict = get_config(*config)
         if len(word_dict.strip()) > 0:
             self.SCAN2_WORD_DICT.update(literal_eval(word_dict))
+
+        # スキャンパターン2にAND条件を適用する
+        config = [conf_file, "SCAN", "scan2_mode_and", False]
+        self.scan2_mode_and = get_config(*config)
 
         # 出力内容(LINE/ALL/FILE/NONE)
         config = [conf_file, "OUTPUT", "display", "LINE"]
@@ -275,7 +280,7 @@ class CheckShadyFile(object):
         result = {}
         result["file_path"] = file_path
 
-        # スキャン1(対象文字列の有無)の結果
+        # スキャン1(対象文字列の有無)の判定
         # どれか1つでもヒットした場合はTrue(怪しい)とする
         scan1_judge = False
         if True in scan1_result.values():
@@ -283,14 +288,29 @@ class CheckShadyFile(object):
         result["result_scan_1_find_word_judge"] = scan1_judge
         result["detail_scan_1_find_word_result"] = scan1_result
 
-        # スキャン2(対象文字列の出現数)の結果
-        # 各しきい値を超えた場合はTrue(怪しい)とする
-        scan2_judge = False
+        # スキャン2(対象文字列の出現数)の判定
+        if self.scan2_mode_and:
+            # AND条件の場合初期値:True
+            scan2_judge = True
+        else:
+            # OR条件の場合初期値:False
+            scan2_judge = False
+
         for keyword, count in scan2_result.items():
             border = self.SCAN2_WORD_DICT[keyword]
-            if count >= border:
-                scan2_judge = True
-                break
+            if self.scan2_mode_and:
+                # AND条件の場合
+                if count < border:
+                    # 一つでもしきい値を超えない場合はFalseとする
+                    scan2_judge = False
+                    break
+            else:
+                # OR条件の場合
+                if count >= border:
+                    # いずれかのしきい値を超えた場合はTrue(怪しい)とする
+                    scan2_judge = True
+                    break
+
         result["result_scan_2_count_word_judge"] = scan2_judge
         result["detail_scan_2_count_word_result"] = scan2_result
 
