@@ -56,8 +56,14 @@ CMSの設定管理が不十分だと外部から攻撃スクリプトをアッ�
 
 ## Install
 
+
 ```
 git clone https://github.com/sk39kii/CheckShadyFile.git
+```
+
+chardetのインストール
+```
+pip install chardet
 ```
 
 ## Licence
