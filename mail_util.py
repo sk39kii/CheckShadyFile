@@ -89,18 +89,22 @@ class MailUtil(object):
 
         Args:
             *args: メール送信情報のリスト
-            [user, pass, smtpsvr、from_addr, to_addr, subject, text]
+            [port, user, pass, smtp, from_addr, to_addr, sbj, text]
         Returns:
         """
         try:
-            login, passwd, smtpsvr, from_addr, to_addr, subject, text = args
+            port, login, passwd, smtp, from_addr, to_addr, sbj, text = args
 
             # メッセージ情報の作成
             to_addr_list, msg_string = self.__create_message_info(
-                from_addr, to_addr, subject, text
+                from_addr, to_addr, sbj, text
             )
+
             # ポート587指定
-            smtp = smtplib.SMTP(smtpsvr, self.SMTP_OP25B_PORT)
+            if port is None or port == 0:
+                port = self.SMTP_OP25B_PORT
+
+            smtp = smtplib.SMTP(smtp, port)
             smtp.ehlo()
             # SSL開始
             smtp.starttls()
