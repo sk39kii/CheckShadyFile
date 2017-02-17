@@ -12,13 +12,11 @@ u"""怪しいファイルを検索します.
 """
 
 from ast import literal_eval
-import os
 import os.path
 import subprocess
 import sys
 
 import common_util
-import mail_util
 
 
 class CheckShadyFile(object):
@@ -38,11 +36,8 @@ class CheckShadyFile(object):
     SCAN2_WORD_DICT = {}
     # スキャン結果の出力内容から除外する拡張子
     OUTPUT_FILE_EXT = []
-
     # 汎用ユーティリティクラス
     __CU = common_util.CommonUtil()
-    # メール送信ユーティリティクラス
-    # __MU = mail_util.MailUtil()
 
     def __init__(self):
         u"""初期処理."""
@@ -67,22 +62,6 @@ class CheckShadyFile(object):
         self.output_file_path_rel = "ABS"
         # ログ出力(True/False)
         self.log_enable = "INFO"
-        # 通知設定(NONE/MAIL/SLACK)
-        self.notice_destination = "NONE"
-        # メール通知設定 SMTPサーバー
-        self.mail_smtp = "127.0.0.1"
-        # メール通知設定 送信元アドレス
-        self.mail_from_addr = ""
-        # メール通知設定 通知先アドレス
-        self.mail_to_addr = ""
-        # メール通知設定 件名
-        self.mail_subject = ""
-        # OP25B環境で使用するポート
-        self.mail_submission_port = 587
-        # ログイン
-        self.mail_login = ""
-        # パスワード
-        self.mail_passwd = ""
 
         self.__load_ignore()
         self.__load_config()
@@ -199,38 +178,6 @@ class CheckShadyFile(object):
         # ログレベル
         config = [conf_file, "LOG", "enable", True]
         self.log_enable = get_config(*config)
-
-        # 通知設定(NONE/MAIL/SLACK)
-        config = [conf_file, "NOTICE", "destination", "NONE"]
-        self.notice_destination = get_config(*config)
-
-        # メール通知設定 SMTPサーバー
-        config = [conf_file, "NOTICE", "mail_smtp", "127.0.0.1"]
-        self.mail_smtp = get_config(*config)
-
-        # メール通知設定 送信元アドレス
-        config = [conf_file, "NOTICE", "mail_from_addr", ""]
-        self.mail_from_addr = get_config(*config)
-
-        # メール通知設定 通知先アドレス
-        config = [conf_file, "NOTICE", "mail_to_addr", ""]
-        self.mail_to_addr = get_config(*config)
-
-        # メール通知設定 件名
-        config = [conf_file, "NOTICE", "mail_subject", ""]
-        self.mail_subject = get_config(*config)
-
-        # OP25B環境で使用するポート
-        config = [conf_file, "NOTICE", "mail_submission_port", 587]
-        self.mail_submission_port = get_config(*config)
-
-        # ログイン
-        config = [conf_file, "NOTICE", "mail_login", ""]
-        self.mail_login = get_config(*config)
-
-        # パスワード
-        config = [conf_file, "NOTICE", "mail_passwd", ""]
-        self.mail_passwd = get_config(*config)
 
     def __printf(self, value=None):
         u"""このクラスの全ての出力を行うメソッド."""
@@ -423,18 +370,13 @@ class CheckShadyFile(object):
         # スキャン結果を格納
         self.add_scan_result(file_path, scan1_result, scan2_result)
 
-    def get_results(self):
-        u"""スキャン結果を整形して返却する.
-
-        Returns:
-            スキャン結果を整形したリスト
-        """
+    def print_results(self):
+        u"""スキャン結果を出力する."""
         if self.output_display == "NONE":
             return None
 
-        buffer_list = []
         # スキャン対象の出力
-        buffer_list.append("Scan target: " + self.target_dir_path)
+        self.__printf("Scan target: " + self.target_dir_path)
 
         for result in self.RESULTS:
             # 怪しいと判定したファイルが出力対象
@@ -477,68 +419,30 @@ class CheckShadyFile(object):
                     s1r = result["detail_scan_1_find_word_result"]
                     s2r = result["detail_scan_2_count_word_result"]
                     buf = "%s\t%s  \t%s" % (s1r, s2r, file_path)
-                    buffer_list.append(buf)
+                    self.__printf(buf)
 
                 elif self.output_display == "ALL":
                     # 判定結果
-                    buffer_list.append("result: %s" % (result["result"]))
+                    self.__printf("result: %s" % (result["result"]))
 
                     # ファイルパス
-                    buffer_list.append("file_path: %s" % (file_path))
+                    self.__printf("file_path: %s" % (file_path))
 
                     # スキャンパターン1の結果
                     key = "result_scan_1_find_word_judge"
-                    buffer_list.append("%s: %s" % (key, result[key]))
+                    self.__printf("%s: %s" % (key, result[key]))
                     key = "detail_scan_1_find_word_result"
-                    buffer_list.append("%s: %s" % (key, result[key]))
+                    self.__printf("%s: %s" % (key, result[key]))
 
                     # スキャンパターン2の結果
                     key = "result_scan_2_count_word_judge"
-                    buffer_list.append("%s: %s" % (key, result[key]))
+                    self.__printf("%s: %s" % (key, result[key]))
                     key = "detail_scan_2_count_word_result"
-                    buffer_list.append("%s: %s" % (key, result[key]))
+                    self.__printf("%s: %s" % (key, result[key]))
 
                 elif self.output_display == "FILE":
                     # ファイルパスのみ
-                    buffer_list.append("file_path: %s" % (file_path))
-
-        return buffer_list
-
-    def print_results(self, buffer_list):
-        u"""スキャン結果を出力する.
-
-        Args:
-            buffer_list: スキャン結果のリスト
-        """
-        # 結果内容
-        buf = ""
-        for line in buffer_list:
-            buf = buf + line + os.linesep
-
-        if not self.output_display == "NONE":
-            # 結果の出力
-            self.__printf(buf)
-
-        # 通知
-        if self.notice_destination == "NONE":
-            return None
-        elif self.notice_destination == "MAIL":
-            # メールで通知
-            obj = mail_util.MailUtil()
-            # メール送信
-            obj.send_op25b(
-                self.mail_submission_port,
-                self.mail_login,
-                self.mail_passwd,
-                self.mail_smtp,
-                self.mail_from_addr,
-                self.mail_to_addr,
-                self.mail_subject,
-                buf
-            )
-        elif self.notice_destination == "SLACK":
-            # Slackに通知
-            pass
+                    self.__printf("file_path: %s" % (file_path))
 
     @staticmethod
     def __iterate_files(root_dir):
@@ -579,9 +483,14 @@ class CheckShadyFile(object):
             if not os.path.isfile(file_path):
                 continue
 
-            # ファイル名に2バイト文字が使われている場合はスキャン対象外とする
-            if self.file_name_wchar and self.__CU.use_wchar(file_path):
+            try:
+                # ファイル名に2バイト文字が使われている場合はスキャン対象外とする
+                if self.file_name_wchar and self.__CU.use_wchar(file_path):
+                    continue
+            except UnicodeDecodeError as ude:
+                self.__printf(ude.message)
                 continue
+
 
             # スキャン対象外の拡張子
             ext = os.path.splitext(file_path)
@@ -628,13 +537,9 @@ class CheckShadyFile(object):
             return None
 
         if len(argv) > 1:
-            # 出力結果格納用リスト
-            output_list = []
             if os.path.exists(argv[1]):
                 self.target_dir_path = argv[1]
-                # スキャン開始時刻
-                output_list.append(common_util.CommonUtil().get_nowtime())
-
+                self.__printf(common_util.CommonUtil().get_nowtime())
                 if os.path.isdir(argv[1]):
                     # 指定ディレクトリ配下のファイルを検索しスキャンする
                     self.search_files(argv[1])
@@ -643,15 +548,11 @@ class CheckShadyFile(object):
                     # ファイル指定時はスキャン対象外リストの効果は無し(記載してあってもスキャンする)
                     self.scan_files(argv[1])
 
-                # スキャン結果を取得
-                output_list.extend(self.get_results())
-                output_list.append(common_util.CommonUtil().get_nowtime())
-
+                # 結果を表示
+                self.print_results()
+                self.__printf(common_util.CommonUtil().get_nowtime())
             else:
-                output_list.append("not exists : " + argv[1])
-
-            # 結果を表示
-            self.print_results(output_list)
+                self.__printf("not exists : " + argv[1])
 
 
 def main():

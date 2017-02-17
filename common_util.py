@@ -321,14 +321,18 @@ class CommonUtil(object):
         encode = "utf-8"
         if self.is_windows():
             encode = "cp932"
+        ret = False
+        try:
+            if isinstance(value, str):
+                value = unicode(value, encode)
 
-        if isinstance(value, str):
-            value = unicode(value, encode)
-
-        for char in value:
-            if ord(char) > 255:
-                return True
-        return False
+            for char in value:
+                if ord(char) > 255:
+                    ret = True
+        except UnicodeDecodeError:
+            print value
+            # print ude.message
+        return ret
 
 
 def main():
